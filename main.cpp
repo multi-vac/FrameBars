@@ -4,6 +4,7 @@
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgcodecs.hpp>
+#include <opencv2/opencv.hpp>
 
 
 int main(int argc, char* argv[])
@@ -35,6 +36,9 @@ int main(int argc, char* argv[])
             break;
         }
 
+        cv::imshow("Display", frame);
+        cv::waitKey(0);
+        cv::cvtColor(frame, frame, cv::COLOR_BGR2RGB);
         cv::imshow("Display", frame);
         cv::waitKey(0);
     }
