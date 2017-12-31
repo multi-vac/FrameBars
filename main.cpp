@@ -6,6 +6,7 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/opencv.hpp>
 
+cv::Mat resize_frame(cv::Mat&);
 
 int main(int argc, char* argv[])
 {
@@ -38,7 +39,12 @@ int main(int argc, char* argv[])
 
         cv::imshow("Display", frame);
         cv::waitKey(0);
-        cv::cvtColor(frame, frame, cv::COLOR_BGR2RGB);
+
+        resize_frame(frame);
+        cv::imshow("Display", frame);
+        cv::waitKey(0);
+
+        frame = frame.reshape(3, frame.rows*frame.cols);
         cv::imshow("Display", frame);
         cv::waitKey(0);
     }
@@ -48,4 +54,23 @@ int main(int argc, char* argv[])
     return 0;
 
 
+}
+
+cv::Mat resize_frame(cv::Mat& image)
+{
+    cv::Size size = image.size();
+
+    double height = size.height;
+    double width = size.width;
+
+    double great = (height > width)?height:width;
+    int height_new = int{100 * height/great};
+    int width_new = int{100 * width/great};
+
+    size.height = height_new;
+    size.width = width_new;
+
+    cv::resize(image, image, size);
+
+    return image;
 }
