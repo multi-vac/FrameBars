@@ -7,6 +7,7 @@
 #include <opencv2/opencv.hpp>
 
 cv::Mat resize_frame(cv::Mat&);
+void cluster(cv::Mat&);
 
 int main(int argc, char* argv[])
 {
@@ -19,7 +20,7 @@ int main(int argc, char* argv[])
     const std::string source = argv[1];
 
     cv::VideoCapture video = cv::VideoCapture(source);
-    cv::Mat frame;
+    cv::Mat frame, kmeans_labels;
     cv::namedWindow("Display");
 
     if(!video.isOpened())
@@ -37,16 +38,16 @@ int main(int argc, char* argv[])
             break;
         }
 
-        cv::imshow("Display", frame);
-        cv::waitKey(0);
-
         resize_frame(frame);
         cv::imshow("Display", frame);
         cv::waitKey(0);
 
+
         frame = frame.reshape(3, frame.rows*frame.cols);
         cv::imshow("Display", frame);
+        cluster(frame);
         cv::waitKey(0);
+        break;
     }
 
 
@@ -73,4 +74,33 @@ cv::Mat resize_frame(cv::Mat& image)
     cv::resize(image, image, size);
 
     return image;
+}
+
+void cluster(cv::Mat& image)
+{
+    // http://aishack.in/tutorials/kmeans-clustering-opencv/
+    // https://docs.opencv.org/3.4.0/d1/d5c/tutorial_py_kmeans_opencv.html
+    // https://docs.opencv.org/3.4.0/de/d63/kmeans_8cpp-example.html
+    // https://stackoverflow.com/questions/10167534/
+    int cluster_count = 5;
+    int attempts = 2;
+    cv::Mat labels, centers, dest;
+
+    // converts Mat object to suitable type
+    image.convertTo(image, CV_32F);
+    cv::TermCriteria criteria = cv::TermCriteria(cv::TermCriteria::EPS+cv::TermCriteria::COUNT, 10, 1.0);
+
+    double compactness = cv::kmeans(image, cluster_count, labels, criteria, attempts, cv::KMEANS_PP_CENTERS, centers);
+
+    std::cout<<"Before conversion:\n\n"<<centers;
+
+    centers.convertTo(centers, CV_8UC3);
+    std::cout<<"\n\nAfter conversion:\n\n"<<centers;
+
+
+    cv::namedWindow("Clusters");
+    cv::imshow("Clusters", centers);
+    cv::waitKey(0);
+
+
 }
