@@ -83,6 +83,7 @@ void cluster(cv::Mat& image)
     // https://docs.opencv.org/3.4.0/de/d63/kmeans_8cpp-example.html
     // https://stackoverflow.com/questions/10167534/
     int cluster_count = 5;
+    std::vector<int> count(cluster_count);
     int attempts = 2;
     cv::Mat labels, centers, dest;
 
@@ -97,9 +98,25 @@ void cluster(cv::Mat& image)
     centers.convertTo(centers, CV_8UC3);
     std::cout<<"\n\nAfter conversion:\n\n"<<centers;
 
+    for(auto i = 0; i < labels.rows; i++)
+    {
+        count[labels.at<int>(i)]++;
+    }
 
+    std::vector<int>::iterator result = std::max_element(count.begin(), count.end());
+    auto index = std::distance(count.begin(), result);
+
+    for(auto i : count)
+    {
+        std::cout<<std::endl<<i<<std::endl;
+    }
+
+    // https://stackoverflow.com/questions/8932893/
+    std::cout<<"\n\nindex: "<<index<<std::endl<<centers.at<cv::Vec3b>(index);
+
+    cv::Mat mat(480, 640, CV_8UC3, centers.at<cv::Vec3b>(index));
     cv::namedWindow("Clusters");
-    cv::imshow("Clusters", centers);
+    cv::imshow("Clusters", mat);
     cv::waitKey(0);
 
 
