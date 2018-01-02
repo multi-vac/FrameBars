@@ -6,6 +6,8 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/opencv.hpp>
 
+auto frame_count = 0.0;
+cv::Mat final_image(300, 1000, CV_8UC3);
 cv::Mat resize_frame(cv::Mat&);
 void cluster(cv::Mat&);
 
@@ -18,9 +20,19 @@ int main(int argc, char* argv[])
     }
 
     const std::string source = argv[1];
-
+    int frame_counter = 0, temp = 0;
     cv::VideoCapture video = cv::VideoCapture(source);
-    cv::Mat frame, kmeans_labels;
+    cv::Mat frame;
+    // int frame_skip = int{video.get(cv::CAP_PROP_FPS)};
+    int frame_skip = 15;
+    int frame_number = int{video.get(CV_CAP_PROP_FRAME_COUNT)};
+
+    std::cout<<frame_skip<<"  "<<frame_number;
+
+    int width = (frame_number/frame_skip) + 1;
+    cv::resize(final_image, final_image, cv::Size(width, width/4.67));
+
+    int counter = 0;
     cv::namedWindow("Display");
 
     if(!video.isOpened())
@@ -31,26 +43,36 @@ int main(int argc, char* argv[])
 
     while(true)
     {
-        video >> frame;
+        // http://answers.opencv.org/question/24714/
+        video.grab();
+        if(counter != frame_skip)
+        {
+            counter++;
+            continue;
+        }
+        video.retrieve(frame);
+        temp++;
         if(frame.empty())
         {
-            std::cout<<"End of the video."<<std::endl;
+            std::cout<<"\nEnd of the video."<<std::endl;
             break;
         }
 
-        resize_frame(frame);
-        cv::imshow("Display", frame);
-        cv::waitKey(0);
+        // cv::imshow("Display", frame);
 
+
+        resize_frame(frame);
+	    cv::imshow("Display", frame);
 
         frame = frame.reshape(3, frame.rows*frame.cols);
-        cv::imshow("Display", frame);
         cluster(frame);
-        cv::waitKey(0);
-        break;
+        cv::waitKey(1);
+        counter = 0;
+        // break;
     }
 
-
+    cv::imwrite(source + "_framebars.png", final_image);
+    std::cout<<temp<<" frames processed.\n";
 
     return 0;
 
@@ -93,10 +115,7 @@ void cluster(cv::Mat& image)
 
     double compactness = cv::kmeans(image, cluster_count, labels, criteria, attempts, cv::KMEANS_PP_CENTERS, centers);
 
-    std::cout<<"Before conversion:\n\n"<<centers;
-
     centers.convertTo(centers, CV_8UC3);
-    std::cout<<"\n\nAfter conversion:\n\n"<<centers;
 
     for(auto i = 0; i < labels.rows; i++)
     {
@@ -106,18 +125,24 @@ void cluster(cv::Mat& image)
     std::vector<int>::iterator result = std::max_element(count.begin(), count.end());
     auto index = std::distance(count.begin(), result);
 
-    for(auto i : count)
+    // https://stackoverflow.com/questions/8932893/
+    cv::Scalar main_cluster = centers.at<cv::Vec3b>(index);
+
+    cv::Mat mat(480, 640, CV_8UC3, main_cluster);
+    //cv::namedWindow("Clusters");
+    //cv::imshow("Clusters", mat);
+
+    for(auto i = 0; i < final_image.rows; i++)
     {
-        std::cout<<std::endl<<i<<std::endl;
+        final_image.at<cv::Vec3b>(i, frame_count)[0] = main_cluster[0];
+        final_image.at<cv::Vec3b>(i, frame_count)[1] = main_cluster[1];
+        final_image.at<cv::Vec3b>(i, frame_count)[2] = main_cluster[2];
     }
 
-    // https://stackoverflow.com/questions/8932893/
-    std::cout<<"\n\nindex: "<<index<<std::endl<<centers.at<cv::Vec3b>(index);
-
-    cv::Mat mat(480, 640, CV_8UC3, centers.at<cv::Vec3b>(index));
-    cv::namedWindow("Clusters");
-    cv::imshow("Clusters", mat);
-    cv::waitKey(0);
+    frame_count += 1;
+    //cv::namedWindow("Framebars");
+    //cv::imshow("Framebars", final_image);
+    //cv::waitKey(1);
 
 
 }
