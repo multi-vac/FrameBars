@@ -6,13 +6,13 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/opencv.hpp>
 
+cv::Mat resize_frame(cv::Mat&);
+cv::Scalar cluster(cv::Mat&);
+void generate_framebars(cv::Scalar&);
 
 auto frame_count = 0;
 cv::Mat final_image(300, 1000, CV_8UC3);
 
-cv::Mat resize_frame(cv::Mat&);
-cv::Scalar cluster(cv::Mat&);
-void generate_framebars(cv::Scalar&);
 
 int main(int argc, char* argv[])
 {
@@ -23,29 +23,30 @@ int main(int argc, char* argv[])
     }
 
     const std::string source = argv[1];
-    int frame_counter = 0, temp = 1;
-    cv::VideoCapture video = cv::VideoCapture(source);
+    int temp = 1;
     cv::Mat frame;
-    int frame_skip = int{video.get(cv::CAP_PROP_FPS)};
-    //int frame_skip = 12;
-    int frame_number = int{video.get(CV_CAP_PROP_FRAME_COUNT)};
     cv::Scalar main_cluster;
-    std::cout<<"Frame Rate: "<<frame_skip<<"\n"<<"Total Frames: "<<frame_number<<std::endl;
 
-    int width = frame_number/frame_skip;
-    cv::resize(final_image, final_image, cv::Size(width, width/4.67));
-
-    int counter = 0;
-    //cv::namedWindow("Display", cv::WINDOW_NORMAL);
-    //cv::resizeWindow("Display", 600, 300);
-
-    //cv::namedWindow("Framebars", cv::WINDOW_NORMAL);
-    //cv::resizeWindow("Framebars", 1000, 300);
+    cv::VideoCapture video = cv::VideoCapture(source);
 
     if(!video.isOpened())
     {
         std::cout<<"Couldn't open the file "<<source<<"."<<std::endl;
     }
+
+    int frame_skip = int{video.get(cv::CAP_PROP_FPS)};
+    int total_frames = int{video.get(CV_CAP_PROP_FRAME_COUNT)};
+
+    std::cout<<"Frame Rate: "<<frame_skip<<"\n"<<"Total Frames: "<<total_frames<<std::endl;
+
+    int width = total_frames/frame_skip;
+    cv::resize(final_image, final_image, cv::Size(width, width/4.67));
+
+    //cv::namedWindow("Display", cv::WINDOW_NORMAL);
+    //cv::resizeWindow("Display", 600, 300);
+
+    //cv::namedWindow("Framebars", cv::WINDOW_NORMAL);
+    //cv::resizeWindow("Framebars", 1000, 300);
 
 
     while(true)
@@ -76,19 +77,16 @@ int main(int argc, char* argv[])
         frame = frame.reshape(3, frame.rows*frame.cols);
         main_cluster = cluster(frame);
         generate_framebars(main_cluster);
-        counter++;
 
         // https://stackoverflow.com/questions/14858262/stdcout-wont-print
-        std::cout<<"Processing Frame "<<counter<<"/"<<width<<"\r";
+        std::cout<<"Processing Frame "<<frame_count<<"/"<<width<<"\r";
         std::cout.flush();
-        //cv::waitKey(1);
         temp = 1;
-        // break;
     }
 
-    std::vector<int>compression_params = {CV_IMWRITE_PNG_COMPRESSION, 9};
+    std::vector<int> compression_params = {CV_IMWRITE_PNG_COMPRESSION, 9};
     cv::imwrite(source + "_framebars.png", final_image, compression_params);
-    std::cout<<counter<<" frames processed.\n";
+    std::cout<<frame_count<<" frames processed.\n";
 
     return 0;
 
@@ -121,14 +119,14 @@ cv::Scalar cluster(cv::Mat& image)
     // https://docs.opencv.org/3.4.0/de/d63/kmeans_8cpp-example.html
     // https://stackoverflow.com/questions/10167534/
 
-    int cluster_count = 5;
+    int cluster_count = 3;
     std::vector<int> count(cluster_count);
-    int attempts = 2;
+    int attempts = 1;
     cv::Mat labels, centers, dest;
 
     // converts Mat object to suitable type
     image.convertTo(image, CV_32F);
-    cv::TermCriteria criteria = cv::TermCriteria(cv::TermCriteria::EPS+cv::TermCriteria::COUNT, 10, 1.0);
+    cv::TermCriteria criteria = cv::TermCriteria(cv::TermCriteria::EPS+cv::TermCriteria::COUNT, 3, 0.1);
 
     double compactness = cv::kmeans(image, cluster_count, labels, criteria, attempts, cv::KMEANS_PP_CENTERS, centers);
 
@@ -154,7 +152,6 @@ void generate_framebars(cv::Scalar& scalar)
         final_image.at<cv::Vec3b>(i, frame_count)[1] = scalar[1];
         final_image.at<cv::Vec3b>(i, frame_count)[2] = scalar[2];
     }
-
     frame_count++;
     //cv::imshow("Framebars", final_image);
     //cv::waitKey(1);
