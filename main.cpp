@@ -1,9 +1,5 @@
 #include <iostream>
-#include <string>
 #include <opencv2/videoio.hpp>
-#include <opencv2/core.hpp>
-#include <opencv2/highgui.hpp>
-#include <opencv2/imgcodecs.hpp>
 #include <opencv2/opencv.hpp>
 
 cv::Mat resize_frame(cv::Mat&);
@@ -23,7 +19,7 @@ int main(int argc, char* argv[])
     }
 
     const std::string source = argv[1];
-    int temp = 1;
+    int counter = 1;
     cv::Mat frame;
     cv::Scalar main_cluster;
 
@@ -32,60 +28,62 @@ int main(int argc, char* argv[])
     if(!video.isOpened())
     {
         std::cout<<"Couldn't open the file "<<source<<"."<<std::endl;
+        return -2;
     }
 
+    // using one frame per second of video
     int frame_skip = int{video.get(cv::CAP_PROP_FPS)};
     int total_frames = int{video.get(CV_CAP_PROP_FRAME_COUNT)};
 
     std::cout<<"Frame Rate: "<<frame_skip<<"\n"<<"Total Frames: "<<total_frames<<std::endl;
 
+    // resizing final_image as per length of video
     int width = total_frames/frame_skip;
     cv::resize(final_image, final_image, cv::Size(width, width/4.67));
-
-    //cv::namedWindow("Display", cv::WINDOW_NORMAL);
-    //cv::resizeWindow("Display", 600, 300);
-
-    //cv::namedWindow("Framebars", cv::WINDOW_NORMAL);
-    //cv::resizeWindow("Framebars", 1000, 300);
 
 
     while(true)
     {
         // http://answers.opencv.org/question/24714/
-        video >> frame;
-        //cv::imshow("Display", frame);
-        //cv::waitKey(1);
-        if(temp != frame_skip)
+        video.grab();
+        if(counter != frame_skip)
         {
-            temp++;
+            counter++;
             continue;
         }
 
+        // decode the frame
+        video.retrieve(frame);
         if(frame.empty())
         {
             std::cout<<"\nEnd of the video."<<std::endl;
             break;
         }
-        //cv::imshow("Display", frame);
-        //cv::waitKey(1);
-        //cv::imshow("Display", frame);
 
-
+        // resizing the frame for better speed
         frame = resize_frame(frame);
-        //cv::imshow("Display", frame);
 
+        // flatten the frame for clustering
         frame = frame.reshape(3, frame.rows*frame.cols);
+
+        // get RGB of biggest kmeans cluster
         main_cluster = cluster(frame);
+
+        // add to final_image
         generate_framebars(main_cluster);
 
-        // https://stackoverflow.com/questions/14858262/stdcout-wont-print
+        // https://stackoverflow.com/questions/14858262/
         std::cout<<"Processing Frame "<<frame_count<<"/"<<width<<"\r";
         std::cout.flush();
-        temp = 1;
+
+        // reset counter
+        counter = 1;
     }
 
+    // saves final_image as png
     std::vector<int> compression_params = {CV_IMWRITE_PNG_COMPRESSION, 9};
     cv::imwrite(source + "_framebars.png", final_image, compression_params);
+
     std::cout<<frame_count<<" frames processed.\n";
 
     return 0;
@@ -95,6 +93,7 @@ int main(int argc, char* argv[])
 
 cv::Mat resize_frame(cv::Mat& image)
 {
+    // taken from https://www.alanzucconi.com/2015/11/18/gamebarcode-a-study-of-colours-in-games/
     cv::Size size = image.size();
 
     double height = size.height;
@@ -108,8 +107,8 @@ cv::Mat resize_frame(cv::Mat& image)
     size.width = width_new;
 
     cv::resize(image, image, size);
-
     return image;
+
 }
 
 cv::Scalar cluster(cv::Mat& image)
@@ -132,12 +131,13 @@ cv::Scalar cluster(cv::Mat& image)
 
     centers.convertTo(centers, CV_8UC3);
 
+    // summing number of points per cluster
     for(auto i = 0; i < labels.rows; i++)
     {
         count[labels.at<int>(i)]++;
     }
 
-
+    // index of biggest cluster
     auto index = std::distance(count.begin(), std::max_element(count.begin(), count.end()));
 
     // https://stackoverflow.com/questions/8932893/
@@ -146,13 +146,13 @@ cv::Scalar cluster(cv::Mat& image)
 
 void generate_framebars(cv::Scalar& scalar)
 {
+    // generate a single pixel wide line in final_image
     for(auto i = 0; i < final_image.rows; i++)
     {
         final_image.at<cv::Vec3b>(i, frame_count)[0] = scalar[0];
         final_image.at<cv::Vec3b>(i, frame_count)[1] = scalar[1];
         final_image.at<cv::Vec3b>(i, frame_count)[2] = scalar[2];
     }
+
     frame_count++;
-    //cv::imshow("Framebars", final_image);
-    //cv::waitKey(1);
 }
