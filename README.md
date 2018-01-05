@@ -2,6 +2,8 @@
 
 Generate colour palettes of your favorite movies!
 
+![example](examples/pf.png)
+
 
 ### Prerequisites
 
@@ -53,7 +55,22 @@ in the frame. Each line in the image represents one second of video. These are t
 
 ### Examples
 
-Yet to add.
+![Pulp Fiction](examples/pf.png)
+Pulp Fiction
+
+
+![Ghost in the Shell](examples/gits.png)
+Ghost in the Shell (1995)
+
+
+
+![Harry Potter](examples/hp.png)
+Harry Potter and the Deathly Hallows - Part 2
+
+
+
+![The Darjeeling Limited](examples/tdl.png)
+The Darjeeling Limited
 
 
 ### To Do
@@ -64,6 +81,7 @@ Yet to add.
 * Deploy the program.
 * Windows compatibility.
 * GUI.
+* More examples.
 
 
 ## Acknowledgments
